@@ -22,7 +22,6 @@ class SequenceNewDataProvider(object):
             sequence_len,
             buffer_size,
             is_training=True,
-            num_cores=8,
             delta_time=1,
             filter_rule=None,
             resize=None,
@@ -44,7 +43,6 @@ class SequenceNewDataProvider(object):
         self.map_pcall_num = map_pcall_num
         self.is_training = is_training
         self.shuffle_queue = shuffle_queue
-        self.num_cores = num_cores
         self.file_pattern = file_pattern
         self.shuffle_seed = shuffle_seed
         self.buffer_size = buffer_size
@@ -219,7 +217,7 @@ class SequenceNewDataProvider(object):
                 source: curr_dataset.apply(
                     tf.contrib.data.parallel_interleave(
                         _fetch_dataset, 
-                        cycle_length=self.num_cores, 
+                        cycle_length=1, 
                         sloppy=False)) \
                 for source,curr_dataset in file_datasets.items()
                 }
