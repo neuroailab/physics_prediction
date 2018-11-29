@@ -9,7 +9,8 @@ We have tested this repo under Ubuntu 16.04 with tensorflow version 1.9.0.
 ## Prepare data
 
 For now, we provide one dataset including two rigid cubes each of which contains 64 particles hitting each other on a static plane described by 5000 particles.
-You can download the dataset through this [link](http://physicspredictiondata.s3.amazonaws.com/physics_dataset.tar).
+You can download the dataset through this [link](http://physicspredictiondata.s3.amazonaws.com/physics_dataset_new.tar).
+For those who downloaded the dataset before Nov. 29th, please download it again as we updated the file to include pretrained model and validation files.
 After downloading, untar this file.
 Please check README.md in `data` folder for more explanations about this dataset.
 
@@ -29,4 +30,4 @@ You can restore your training by setting `restore_path` parameter.
 
 We will soon release a script for using a trained model to generate predictions through unrolling.
 Along training, the reported losses including `loss`, `preserve_distance_loss`, `un_velocity_loss`, and `velocity_loss` should usually keep decreasing.
-At the end of the training, `velocity_loss` should be around `0.0030`.
+At the end of the training, `velocity_loss` should be around `0.0006`.
