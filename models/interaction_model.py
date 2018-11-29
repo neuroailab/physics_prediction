@@ -186,8 +186,6 @@ class HRNModel(object):
             place_keys.append('gravity')
         if self.vary_stiff==1:
             place_keys.append('stiffness')
-        if self.obj_dyn_group:
-            place_keys.extend(self.OBJ_DYN_KEY)
 
         for key in place_keys:
             org_inpt_ts = self.inputs[key]
@@ -962,6 +960,9 @@ class HRNModel(object):
                     pred_particle_velocity)
             retval['pred_particle_velocity'] = pred_particle_velocity
 
+        if self.debug:
+            print('------NETWORK END-----')
+
         return retval
 
     def prepare_for_building(self):
@@ -994,8 +995,5 @@ def hrn(**kwargs):
     E = hrn_model.build_hrn_network()
     pred_particle_velocity = hrn_model.get_predictions(E)
     retval = hrn_model.set_retval(pred_particle_velocity)
-
-    if hrn_model.debug:
-        print('------NETWORK END-----')
 
     return retval, hrn_model.model_builder.params

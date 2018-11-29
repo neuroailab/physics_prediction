@@ -248,7 +248,7 @@ class ParameterSetter(object):
                     self.data_paths, 
                     NS_TRAIN_EXAMPLES, 
                     self.group_file, 
-                    cache_flag=1),
+                    ),
                 'is_training':True,
                 }
 
