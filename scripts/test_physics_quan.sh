@@ -1,5 +1,5 @@
 expId=physics_pred_better
-group_file=/mnt/fs1/chengxuz/Dataset/5231_world_dataset/group_result_km6_aaaddd_sd0.pkl
+group_file=group_result_km6_aaaddd_sd0.pkl
 python test.py \
     --quant 1 --unroll_length 10 \
     --expId ${expId} \
@@ -11,4 +11,4 @@ python test.py \
     --network_func physics_network \
     --batchsize 256 \
     --with_static 1 --add_gloss 4 \
-    --dataset /mnt/fs1/datasets/5231_world_dataset "$@"
+    "$@"
