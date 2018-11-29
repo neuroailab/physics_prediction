@@ -41,7 +41,7 @@ sh test_physics_qual.sh --gpu your_gpu_number --dataset path_to_your_dataset --r
 ```
 
 By default, this will generate two pickle files named as `true_results_physics_pred_better_8.pkl` and `results_physics_pred_better_8.pkl` in your home directory.
-You can change saving directly by setting `SAVE_DIR` parameter.
+You can change saving directly by setting `SAVE_DIR` parameter. Please check examples of visualizing these results in `visualize` folder.
 
 Similarly for a quantitative test, you can just replace `test_physics_qual.sh` using `test_physics_quan.sh`. 
 Then you will see the metrics also reported in our paper as outputs of this command.
