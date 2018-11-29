@@ -146,7 +146,6 @@ class HRNModel(object):
         """
         Read in and do necessary post-processing to inputs
         including subtracting the room center, potential random mass,
-        and potential affine transformations
         """
         post_proc = PhysicsPostprocess(
                 self.inputs,                 
@@ -158,24 +157,67 @@ class HRNModel(object):
                 mass_adjust=self.mass_adjust,
                 )
         self.post_proc = post_proc
-        self.inputs = post_proc.inputs
-        inputs = self.inputs
+        self.org_input_ts = post_proc.inputs
+        self.inputs = copy.copy(post_proc.inputs)
+        self.sparse_particles = self.inputs['sparse_particles']
 
-        self.sparse_particles = inputs['sparse_particles']
+    def _set_test_placeholders(self):
+        """
+        As test is done by feed_dict, we need to set the placeholders here
+        """
+        num_particles = self.sparse_particles.get_shape().as_list()[2]
+        self.full_particles_place = tf.placeholder(
+                tf.float32,
+                [self.test_batch_size, self.sl, num_particles, 22], 
+                'particle_input')
+        self.sparse_particles = self.post_proc.adjust_mass_for_particles(
+                self.full_particles_place)
+
+        self.placeholders = {}
+        place_keys = []
+
+        if self.use_collisions==1:
+            place_keys.append('collision')
+        if self.use_self==1:
+            place_keys.append('self_collision')
+        if self.use_static==1:
+            place_keys.append('static_collision')
+        if self.vary_grav==1:
+            place_keys.append('gravity')
+        if self.vary_stiff==1:
+            place_keys.append('stiffness')
+        if self.obj_dyn_group:
+            place_keys.extend(self.OBJ_DYN_KEY)
+
+        for key in place_keys:
+            org_inpt_ts = self.inputs[key]
+            org_shape = org_inpt_ts.shape.as_list()
+            place_shape = [self.test_batch_size] + org_shape[1:]
+            curr_placeholder = tf.placeholder(
+                    org_inpt_ts.dtype,
+                    place_shape,
+                    '%s_input' % key
+                    )
+            self.placeholders[key] = curr_placeholder
+            self.inputs[key] = curr_placeholder
+            self.inputs['%s_mask' % key] = tf.ones_like(
+                    curr_placeholder, 
+                    dtype=tf.bool)
+
+    def _set_attributes_from_inputs(self):
+        inputs = self.inputs
 
         if self.use_collisions==1:
             assert 'collision' in inputs, "There needs to be collision in input"
             self.collision = inputs['collision'] # (BS, sl, NC, 3)
             self.nc = self.collision.get_shape().as_list()[2]
             self.collision_mask = inputs['collision_mask']
-
         if self.use_self==1:
             assert 'self_collision' in inputs, \
                     'There needs to be self collision in input'
             self.self_collision = inputs['self_collision'] # (BS, sl, NCC, 3)
             self.ncc = self.self_collision.get_shape().as_list()[2]
             self.self_collision_mask = inputs['self_collision_mask']
-
         if self.use_static==1:
             assert 'static_particles' in inputs, \
                     'There needs to be static particles in input'
@@ -183,66 +225,6 @@ class HRNModel(object):
             self.static_collision = inputs['static_collision'] # (BS, sl, NSC, 3)
             self.nsc = self.static_collision.get_shape().as_list()[2]
             self.static_collision_mask = inputs['static_collision_mask']
-
-    def _set_test_placeholders(self):
-        """
-        As test is done by feed_dict, we need to set the placeholders here
-        """
-        num_particles = self.sparse_particles.get_shape().as_list()[2]
-        if self.use_collisions==1:
-            self.collision_place = tf.placeholder(
-                    self.collision.dtype,
-                    [self.test_batch_size, self.sl, self.nc, 3], 
-                    'collision_input',
-                    )
-            self.collision = self.collision_place
-            self.collision_mask = tf.cast(
-                    tf.ones_like(self.collision, dtype=tf.float32),
-                    tf.bool
-                    )
-
-        if self.use_self==1:
-            self.self_collision_place = tf.placeholder(
-                    self.self_collision.dtype, \
-                    [self.test_batch_size, self.sl, self.ncc, 4], 
-                    'self_collision_input')
-            self.self_collision = self.self_collision_place
-            self.self_collision_mask = tf.cast(
-                    tf.ones_like(self.self_collision, dtype=tf.float32),
-                    tf.bool
-                    )
-
-        if self.use_static==1:
-            self.static_collision_place = tf.placeholder(
-                    self.static_collision.dtype,
-                    [self.test_batch_size, self.sl, self.nsc, 3], 
-                    'static_collision_input')
-            self.static_collision = self.static_collision_place
-            self.static_collision_mask = tf.cast(
-                    tf.ones_like(self.static_collision, dtype=tf.float32),
-                    tf.bool
-                    )
-        
-        if self.vary_grav==1:
-            self.inp_gravity_place = tf.placeholder(
-                    self.inp_gravity.dtype,
-                    [self.test_batch_size, 1, self.sl], 
-                    'gravity_input')
-            self.inp_gravity = tf.transpose(self.inp_gravity_place, [0,2,1])
-
-        if self.vary_stiff==1:
-            self.inp_stiff_place = tf.placeholder(
-                    self.inp_stiff.dtype,
-                    [self.test_batch_size, self.num_stiff_values, self.sl], 
-                    'stiffness_input')
-            self.inp_stiff = tf.transpose(self.inp_stiff_place, [0,2,1])
-
-        self.full_particles_place = tf.placeholder(
-                tf.float32,
-                [self.test_batch_size, self.sl, num_particles, 22], 
-                'particle_input')
-        self.sparse_particles = self.post_proc.adjust_mass_for_particles(
-                self.full_particles_place)
 
     def _set_bs_ts_no(self):
         self.bs = self.sparse_particles.get_shape().as_list()[0]
@@ -884,7 +866,7 @@ class HRNModel(object):
         E = E_L2H + E_WG + E_H2L
         return E
 
-    def build_one_time_effects(self):
+    def build_hrn_network(self):
         cfg = self.cfg
         self.de = cfg['phiR'][cfg['phiR_depth']]['num_features']
         E = self.get_effects()
@@ -969,63 +951,48 @@ class HRNModel(object):
             if self.debug:
                 print('------Recover velocity for test-----')
 
-            if self.use_collisions==1:
-                retval['collision_placeholder'] = self.collision_place
+            for key, placeholder in self.placeholders.items():
+                retval['%s_placeholder' % key] = placeholder
+            retval['particles_placeholder'] = self.full_particles_place
 
-            if self.vary_grav==1:
-                retval['inp_gravity_placeholder'] = self.inp_gravity_place
-                retval['inp_gravity'] = self.org_inp_gravity
-
-            if self.vary_stiff==1:
-                retval['inp_stiff_placeholder'] = self.inp_stiff_place
-                retval['inp_stiff'] = self.org_inp_stiff
-
-            if self.use_static==1:
-                retval['static_collision_placeholder'] \
-                        = self.static_collision_place
-            if self.use_self==1:
-                retval['self_collision_placeholder'] = self.self_collision_place
+            retval.update(self.org_input_ts)
 
             pred_particle_velocity = tf.matmul(
                     self.mult_mat_rev_ts, 
                     pred_particle_velocity)
             retval['pred_particle_velocity'] = pred_particle_velocity
-            retval['particles_placeholder'] = self.full_particles_place
-            retval[self.is_moving] = inputs[self.is_moving]
-            retval['is_acting'] = inputs['is_acting']
-            retval['sparse_particles'] = inputs['sparse_particles']
-            retval['full_particles'] = inputs['full_particles']
-            retval.update(self.post_proc.inputs)
 
         return retval
+
+    def prepare_for_building(self):
+        self._get_group_and_which_dataset()
+        self._get_grav_stiff()
+
+        if self.debug:
+            print('------NETWORK START-----')
+
+        self._post_process_data()
+
+        # Define placeholders for test script that feeds in its own predictions
+        if self.my_test:
+            self._set_test_placeholders()
+        self._set_attributes_from_inputs()
+
+        self._set_bs_ts_no()
+        self._apply_group()
+        self._set_bs_ts_no()
+
+        self._get_states()
+        self._set_short_names_for_dims()
+        self._set_gravity()
 
 
 def hrn(**kwargs):
     hrn_model = HRNModel(**kwargs)
 
-    hrn_model._get_group_and_which_dataset()
-    hrn_model._get_grav_stiff()
-
-    if hrn_model.debug:
-        print('------NETWORK START-----')
-
-    hrn_model._post_process_data()
-
-    # Define placeholders for test script that feeds in its own predictions
-    if hrn_model.my_test:
-        hrn_model._set_test_placeholders()
-
-    hrn_model._set_bs_ts_no()
-    hrn_model._apply_group()
-    hrn_model._set_bs_ts_no()
-
-    hrn_model._get_states()
-    hrn_model._set_short_names_for_dims()
-    hrn_model._set_gravity()
-
-    E = hrn_model.build_one_time_effects()
+    hrn_model.prepare_for_building()
+    E = hrn_model.build_hrn_network()
     pred_particle_velocity = hrn_model.get_predictions(E)
-
     retval = hrn_model.set_retval(pred_particle_velocity)
 
     if hrn_model.debug:
