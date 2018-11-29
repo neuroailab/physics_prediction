@@ -165,7 +165,7 @@ def get_dataset_setting(parser):
 def get_test_setting(parser):
     # Parameter for test
     parser.add_argument(
-            '--SAVE_DIR', default='/home/chengxuz', type=str, action='store', 
+            '--SAVE_DIR', default=None, type=str, action='store', 
             help='Save directory')
     parser.add_argument(
             '--on_val', default=1, type=int, action='store', help='Whether on validation set')

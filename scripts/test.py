@@ -119,6 +119,8 @@ def main():
     parser = train.get_parser()
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    if args.SAVE_DIR is None:
+        args.SAVE_DIR = os.environ['HOME']
 
     test_class = TestFramework(args)
     test_class.prepare_for_test()
