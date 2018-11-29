@@ -336,9 +336,9 @@ def save_and_report_results(results, args):
 
 
 def retrieve_quantitative_results_parallel(
-        sess, valid_targets_dict, 
+        sess, outputs, 
         n_validation_examples, args):
-    quan_class = QuanTest(sess, valid_targets_dict, args, args.test_seed)
+    quan_class = QuanTest(sess, outputs, args, args.test_seed)
 
     print('=========================')
     print('Evaluating %d validation examples...' % (n_validation_examples))

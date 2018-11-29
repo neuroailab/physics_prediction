@@ -162,8 +162,8 @@ def save_results_pickle(predicted_sequences, use_ground_truth_for_unroll, args):
     print('Results stored in ' + results_file)
 
 
-def retrieve_qualitative_examples(sess, valid_targets_dict, args):
-    qual_class = QualTest(sess, valid_targets_dict, args, args.test_seed)
+def retrieve_qualitative_examples(sess, outputs, args):
+    qual_class = QualTest(sess, outputs, args, args.test_seed)
 
     # start at a random batch and pull data
     batch = qual_class.pull_batch_random(args.qual_random_pull)

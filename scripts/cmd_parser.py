@@ -189,10 +189,10 @@ def get_test_setting(parser):
             '--test_seed', default=8, type=int, action='store', 
             help='Random seed for testing')
     parser.add_argument(
-            '--TEST_BATCH_SIZE', default=256, type=int, action='store', 
+            '--TEST_BATCH_SIZE', default=64, type=int, action='store', 
             help='test batch size, for quant==1')
     parser.add_argument(
-            '--test_n_pulls', default=16, type=int, action='store', 
+            '--test_n_pulls', default=4, type=int, action='store', 
             help='Number of pulls, for quant==1')
     parser.add_argument(
             '--fancy_test', default=0, type=int, action='store', 

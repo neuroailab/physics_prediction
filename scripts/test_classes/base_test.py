@@ -12,7 +12,7 @@ class BaseTest(object):
     def __init__(
             self,
             sess, 
-            valid_targets_dict, 
+            outputs, 
             args,
             seed,
             ):
@@ -21,9 +21,9 @@ class BaseTest(object):
         self.seed = seed
         self.trivial_update_keys = []
         
-        self.unpack_ops(valid_targets_dict, args)
+        self.unpack_ops(outputs, args)
 
-    def unpack_ops(self, valid_targets_dict, args):
+    def unpack_ops(self, outputs, args):
         args = self.args
 
         input_ts_keys = [
@@ -51,18 +51,16 @@ class BaseTest(object):
             placeholders_keys.append('stiffness')
             self.trivial_update_keys.append('stiffness')
 
-        valid_targets = valid_targets_dict['valid0']['targets']
-
         input_tensor_dict = {}
         for each_key in input_ts_keys:
-            input_tensor_dict[each_key] = valid_targets[each_key]
+            input_tensor_dict[each_key] = outputs[each_key]
 
         placeholders = {}
         for each_key in placeholders_keys:
-            placeholders[each_key] = valid_targets['%s_placeholder' % each_key]
+            placeholders[each_key] = outputs['%s_placeholder' % each_key]
 
         # run model ops
-        predict_velocity_ts = valid_targets['pred_particle_velocity']
+        predict_velocity_ts = outputs['pred_particle_velocity']
 
         self.input_tensor_dict = input_tensor_dict
         self.placeholders = placeholders
