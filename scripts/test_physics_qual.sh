@@ -1,6 +1,7 @@
 expId=physics_pred_better
 group_file=group_result_km6_aaaddd_sd0.pkl
-python train.py \
+python test.py \
+    --quant 0 --unroll_length 10 \
     --expId ${expId} \
     --alpha 0.01 \
     --number_of_kNN 10 --OB1 48 --OB2 49 \

@@ -162,6 +162,54 @@ def get_dataset_setting(parser):
     return parser
 
 
+def get_test_setting(parser):
+    # Parameter for test
+    parser.add_argument(
+            '--SAVE_DIR', default=None, type=str, action='store', 
+            help='Save directory')
+    parser.add_argument(
+            '--on_val', default=1, type=int, action='store', help='Whether on validation set')
+    parser.add_argument(
+            '--MODEL_BATCH_SIZE', default=64, type=int, action='store', help='Batch size')
+    parser.add_argument(
+            '--save_suf', default=None, type=str, action='store', help='Suffix of saving')
+    parser.add_argument(
+            '--quant', default=1, type=int, action='store', 
+            help='Whether to compute quantitative metrics or not')
+    parser.add_argument(
+            '--unroll_length', default=None, type=int, action='store', 
+            help='Unrolling length of prediction during evaluation')
+    parser.add_argument(
+            '--pred_unroll_length', default=None, type=int, action='store', 
+            help='Unrolling length of prediction during evaluation')
+    parser.add_argument(
+            '--coll_online', default=1, type=int, action='store', 
+            help='Whether compute collision relations online')
+    parser.add_argument(
+            '--test_seed', default=8, type=int, action='store', 
+            help='Random seed for testing')
+    parser.add_argument(
+            '--TEST_BATCH_SIZE', default=64, type=int, action='store', 
+            help='test batch size, for quant==1')
+    parser.add_argument(
+            '--test_n_pulls', default=4, type=int, action='store', 
+            help='Number of pulls, for quant==1')
+    parser.add_argument(
+            '--fancy_test', default=0, type=int, action='store', 
+            help='If set to 1, will pull the first part of the test data')
+    parser.add_argument(
+            '--only_first', default=0, type=int, action='store', 
+            help='If set to bigger than 1, will only use the first several ranges')
+    parser.add_argument(
+            '--manual_range', default=None, type=str, action='store', 
+            help='If set, will use this range')
+    parser.add_argument(
+            '--qual_random_pull', 
+            default=16, type=int, action='store', 
+            help='Maximal of random pulls, for qual')
+    return parser
+
+
 def get_parser():
     parser = argparse.ArgumentParser(
             description='Solve the physics!')
@@ -170,5 +218,6 @@ def get_parser():
     parser = get_optimizer_setting(parser)
     parser = get_train_setting(parser)
     parser = get_dataset_setting(parser)
+    parser = get_test_setting(parser)
 
     return parser

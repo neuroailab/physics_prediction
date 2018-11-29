@@ -27,18 +27,13 @@ def return_outputs(inputs, outputs, targets, **kwargs):
 
 def combine_interaction_data(
         data_paths, nums_examples, group_paths, 
-        cache_flag=0):
+        ):
     data = []
     curr_indx = 0
     for data_path, num_examples, group_path in \
             zip(data_paths, nums_examples, group_paths):
         if not group_path is None:
-            if cache_flag==0:
-                group_data = cPickle.load(open(group_path, 'r'))
-                for key, value in group_data.items():
-                    group_data[key] = np.array(value)
-            else:
-                group_data = {'which_dataset': curr_indx}
+            group_data = {'which_dataset': curr_indx}
         else:
             group_data = {}
         data.append((data_path, num_examples, group_data))

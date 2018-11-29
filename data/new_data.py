@@ -355,7 +355,7 @@ class SequenceNewDataProvider(object):
             # Shuffle it
             zip_dataset = zip_dataset.shuffle(
                     buffer_size=self.buffer_size, 
-                    seed=self.shuffle_seed,
+                    seed=None,
                     )
         # Batch it again
         zip_dataset = zip_dataset.apply(
