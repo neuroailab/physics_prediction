@@ -28,6 +28,21 @@ You can restore your training by setting `restore_path` parameter.
 
 ## Validate your training
 
-We will soon release a script for using a trained model to generate predictions through unrolling.
-Along training, the reported losses including `loss`, `preserve_distance_loss`, `un_velocity_loss`, and `velocity_loss` should usually keep decreasing.
+During training, the reported losses including `loss`, `preserve_distance_loss`, `un_velocity_loss`, and `velocity_loss` should usually keep decreasing.
 At the end of the training, `velocity_loss` should be around `0.0006`.
+
+Additionally, we provide two example bash scripts for quantatively and qualitatively verifying the trained model. 
+Besides, we also provide a pretrained model trained using the training bash script in the dataset.
+
+Now if you want to run a qualitative test, you can go to folder `scripts`. And run the following command:
+
+```
+sh test_physics_qual.sh --gpu your_gpu_number --dataset path_to_your_dataset --restore_path path_to_your_dataset/pretrained_model/checkpoint-384000
+```
+
+By default, this will generate two pickle files named as `true_results_physics_pred_better_8.pkl` and `results_physics_pred_better_8.pkl` in your home directory.
+You can change saving directly by setting `SAVE_DIR` parameter.
+
+Similarly for a quantitative test, you can just replace `test_physics_qual.sh` using `test_physics_quan.sh`. 
+Then you will see the metrics also reported in our paper as outputs of this command.
+And the test result will be stored as `quant_results_physics_pred_better_8.pkl` in your home directory by default.
