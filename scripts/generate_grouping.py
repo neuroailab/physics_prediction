@@ -13,74 +13,105 @@ import sklearn.cluster as skcluster
 
 def load_tfrs(args, type_dict={'kNN':np.int16,'full_particles':np.float32}):
 
-    #curr_key_list = ['kNN', 'full_particles']
-    curr_key_list = ['full_particles']
+    main_key = 'full_particles'
     ret_res = []
-    for curr_key in curr_key_list:
-        #curr_key = 'kNN'
-        kNN_dir = os.path.join(args.datapath, curr_key)
-        kNN_meta_path = os.path.join(kNN_dir, 'meta.pkl')
-        kNN_meta = cPickle.load(open(kNN_meta_path, 'r'))
 
-        all_tfrs_path = os.listdir(kNN_dir)
-        all_tfrs_path = filter(lambda x:'tfrecords' in x, all_tfrs_path)
-        all_tfrs_path.sort()
-        all_tfrs_path = [os.path.join(kNN_dir, each_tfr) for each_tfr in all_tfrs_path]
+    fp_dir = os.path.join(args.datapath, main_key)
+    fp_meta_path = os.path.join(fp_dir, 'meta.pkl')
+    fp_meta = cPickle.load(open(fp_meta_path, 'r'))
 
-        file_num=0
-        for tfr_path in all_tfrs_path:
-            record_iterator = tf.python_io.tf_record_iterator(path=tfr_path)
-            get_num = 0
+    all_tfrs_path = os.listdir(fp_dir)
+    all_tfrs_path = filter(lambda x:'tfrecords' in x, all_tfrs_path)
+    all_tfrs_path.sort()
+    all_tfrs_path = [\
+            os.path.join(fp_dir, each_tfr) \
+            for each_tfr in all_tfrs_path]
 
-            for string_record in record_iterator:
-                example = tf.train.Example()
-                example.ParseFromString(string_record)
-                kNN_string = (example.features.feature[curr_key]
-                                              .bytes_list
-                                              .value[0])
-                kNN_array = np.fromstring(kNN_string, dtype=type_dict[curr_key])
-                kNN_array = kNN_array.reshape(kNN_meta[curr_key]['rawshape'])
-                get_num = get_num+1
-                if get_num==11:
-                    ret_res.append(kNN_array)
-                    break
-            file_num = file_num+1
-            if file_num==1:
+    for tfr_path in all_tfrs_path:
+        record_iterator = tf.python_io.tf_record_iterator(path=tfr_path)
+        get_num = 0
+
+        for string_record in record_iterator:
+            example = tf.train.Example()
+            example.ParseFromString(string_record)
+            fp_string = (example.features.feature[main_key]
+                                          .bytes_list
+                                          .value[0])
+            fp_array = np.fromstring(fp_string, dtype=type_dict[main_key])
+            fp_array = fp_array.reshape(fp_meta[main_key]['rawshape'])
+            get_num = get_num+1
+            if get_num >= args.skip_frame:
+                if args.num_particle_filter:
+                    now_num = np.sum(fp_array[:, 14] > 0)
+                    if now_num != args.num_particle_filter:
+                        continue
+                ret_res.append(fp_array)
                 break
+        if len(ret_res) >= 1:
+            break
 
     return ret_res[0]
 
 def get_parser():
-    parser = argparse.ArgumentParser(description='The script to get the grouping index')
-    parser.add_argument('--datapath', default='/data2/mrowca/datasets/18_world_dataset/new_tfdata', type=str, 
+    parser = argparse.ArgumentParser(
+            description='The script to get the grouping index')
+    parser.add_argument(
+            '--datapath', 
+            default='/data2/mrowca/datasets/18_world_dataset/new_tfdata', 
+            type=str, 
             action='store', help='Load directory of the flex dataset')
-    parser.add_argument('--num_per_level', default=10, type=int, action='store', help='Number of particles for each level')
-    parser.add_argument('--savepath', default='/data2/chengxuz/Dataset/18_world_dataset/group_result.pkl', type=str, 
-            action='store', help='Save path of the grouping results')
-    parser.add_argument('--cluster_alg', default=None, type=str,
-            action='store', help='Algorithm for clustering, none for default distance-based algorithm')
-    parser.add_argument('--cluster_kwargs', default=None, type=str,
+    parser.add_argument(
+            '--num_per_level', default=10, type=int, 
+            action='store', help='Number of particles for each level')
+    parser.add_argument(
+            '--savepath', 
+            default='/data2/chengxuz/Dataset/18_world_dataset/group_result.pkl', 
+            type=str, action='store', help='Save path of the grouping results')
+    parser.add_argument(
+            '--cluster_alg', default=None, type=str,
+            action='store', required=True,
+            help='Algorithm for clustering')
+    parser.add_argument(
+            '--cluster_kwargs', default=None, type=str,
             action='store', help='Kwargs for clustering algorithm')
-    parser.add_argument('--dyn_div', default=0, type=int, action='store', 
+    parser.add_argument(
+            '--dyn_div', default=0, type=int, action='store', 
             help='Whether dynamically dividing particles')
-    parser.add_argument('--add_sparse', default=0, type=int, action='store', 
+    parser.add_argument(
+            '--add_sparse', default=0, type=int, action='store', 
             help='Whether adding sparse representations for the matrixes')
-    parser.add_argument('--add_axis', default=0, type=int, action='store', 
+    parser.add_argument(
+            '--add_axis', default=0, type=int, action='store', 
             help='Whether adding group longest axis, default is 0 (no)')
-    parser.add_argument('--rand_seed', default=None, type=int, action='store', 
+    parser.add_argument(
+            '--rand_seed', default=None, type=int, action='store', 
             help='Whether fixing rand seed, default is None!')
-    parser.add_argument('--add_dist', default=0, type=int, action='store', 
+    parser.add_argument(
+            '--add_dist', default=0, type=int, action='store', 
             help='Whether adding ground truth distance, default is 0 (no)')
-    parser.add_argument('--remove_top', default=0, type=int, action='store', 
+    parser.add_argument(
+            '--remove_top', default=0, type=int, action='store', 
             help='Whether removing the top, default is 0 (No)!')
-    parser.add_argument('--add_local_mat', default=0, type=int, action='store', 
+    parser.add_argument(
+            '--add_local_mat', default=0, type=int, action='store', 
             help='Whether adding local motion matrix, default is 0 (No)!')
-    parser.add_argument('--mult_obj_special', default=0, type=int, action='store', 
-            help='Whether adding multiple object special support, default is 0 (No)!')
-    parser.add_argument('--reverse_division', default=0, type=int, action='store', 
-            help='When adding multiple object special support, setting this to 1 will reverse the division')
-    parser.add_argument('--ignore_obj_ids', default=0, type=int, action='store', 
-            help='Whether ignoring object ids saved, if yes, all particles are treated as in the same object')
+    parser.add_argument(
+            '--mult_obj_special', default=0, type=int, action='store', 
+            help='Adding multiple object special support, default is 0 (No)!')
+    parser.add_argument(
+            '--reverse_division', default=0, type=int, action='store', 
+            help='When adding multiple object special support, '\
+                    + 'setting this to 1 will reverse the division')
+    parser.add_argument(
+            '--ignore_obj_ids', default=0, type=int, action='store', 
+            help='Whether ignoring object ids saved, if yes, '\
+                    + 'all particles are treated as in the same object')
+    parser.add_argument(
+            '--skip_frame', default=11, type=int, action='store', 
+            help='Skipping first several frames for first file')
+    parser.add_argument(
+            '--num_particle_filter', default=None, type=int, action='store', 
+            help='Only requiring this number of particles')
 
     return parser
 
@@ -105,7 +136,9 @@ def get_axis_for_each_group(full_pos, father_list):
     all_axis = np.zeros(num_prt)
 
     for indx in xrange(num_prt):
-        son_nodes = [each_n for each_n in xrange(indx) if father_list[each_n]==indx]
+        son_nodes = [\
+                each_n for each_n in xrange(indx) \
+                if father_list[each_n]==indx]
         if len(son_nodes)>0:
             curr_axis = get_longest_axis(full_pos, son_nodes)
             all_axis[indx] = curr_axis
@@ -118,7 +151,8 @@ def get_dist_mat(full_pos):
 
     for indx_0 in xrange(num_prt):
         for indx_1 in xrange(num_prt):
-            dist_mat[indx_0, indx_1] = np.linalg.norm(full_pos[indx_0] - full_pos[indx_1])
+            _curr_dist = np.linalg.norm(full_pos[indx_0] - full_pos[indx_1])
+            dist_mat[indx_0, indx_1] = _curr_dist
 
     return dist_mat
 
@@ -131,7 +165,9 @@ def get_hier_mask(father_list):
             curr_father = father_list[start_idx]
             return 1 + get_particle_depth(curr_father)
 
-    depth_list = [get_particle_depth(each_p) for each_p in xrange(len(father_list))]
+    depth_list = [\
+            get_particle_depth(each_p) \
+            for each_p in xrange(len(father_list))]
     depth_list = np.asarray(depth_list)
 
     return depth_list
@@ -141,33 +177,40 @@ def try_group_alg(
         full_pos,
         node_list,
         ):
+    '''
+    The function to use specified algorithm to group particles
+    '''
     new_nodes = []
-
     # Build the cluster
     cluster_func = getattr(skcluster, args.cluster_alg)
     cluster_kwargs = json.loads(args.cluster_kwargs)
-
+    if 'n_clusters' in cluster_kwargs:
+        cluster_kwargs['n_clusters'] = args.num_per_level
+    # Dynamically choose the number of clusters
     if args.dyn_div==1:
-        curr_div = min(int(np.sqrt(len(node_list))), args.num_per_level)
+        curr_div = min(
+                int(len(node_list)/args.num_per_level), 
+                args.num_per_level)
+        if curr_div==1:
+            return [[each_node] for each_node in node_list]
         if 'n_clusters' in cluster_kwargs:
             cluster_kwargs['n_clusters'] = curr_div
-
+    # Actually running the clustering algorithm
     cluster = cluster_func(**cluster_kwargs)
     pos_arr = np.asarray([full_pos[each_node] for each_node in node_list])
     cluster_res = cluster.fit_predict(pos_arr)
-
-    #print(node_list)
-    #print(cluster_res)
-    #pdb.set_trace()
-
+    # Put each group together
     largest_group = np.max(cluster_res) + 1
     for group_indx in xrange(largest_group):
-        new_nodes.append([node_list[curr_indx] for curr_indx,curr_i in enumerate(cluster_res) if curr_i==group_indx])
+        new_nodes.append(
+                [node_list[curr_indx] \
+                        for curr_indx,curr_i in enumerate(cluster_res) \
+                        if curr_i==group_indx])
 
-    #print(largest_group)
-    #pdb.set_trace()
-    #print(new_nodes)
-
+    # Test codes: Count the number of nodes in each group
+    #len_nodes = [len(each_group) for each_group in new_nodes]
+    #if 1 in len_nodes:
+    #    print(len_nodes, len(node_list))
     return new_nodes
 
 def add_one_node(
@@ -214,7 +257,8 @@ def add_one_node(
     ## Add new member to father list and change son's father flag
     father_list.append(None)
     for son_indx in son_nodes:
-        assert father_list[son_indx] is None, "Father flag must be None for sons!"
+        assert father_list[son_indx] is None, \
+                "Father flag must be None for sons!"
         father_list[son_indx] = new_indx
 
     return new_indx
@@ -250,17 +294,20 @@ def group_particles(
         new_nodes = try_group_alg(args,pos_list,node_to_group)
 
     ## Add each new node and add the overall new node
+    ## if there is only one group returned, forcing all particles there to be one group
     new_group = []
     for each_son_nodes in new_nodes:
-        new_node,pos_list,kNN_list,new_node_list,groupflag_list,father_list = group_particles(
-                args,
-                each_son_nodes,
-                pos_list, 
-                kNN_list,
-                new_node_list,
-                groupflag_list,
-                father_list,
-                )
+        new_node, pos_list, \
+                kNN_list, new_node_list, \
+                groupflag_list, father_list = group_particles(
+                        args,
+                        each_son_nodes,
+                        pos_list, 
+                        kNN_list,
+                        new_node_list,
+                        groupflag_list,
+                        father_list,
+                        )
         new_group.append(new_node)
     if remove_top==0:
         new_indx = add_one_node(new_group, *ret_res)
@@ -269,8 +316,10 @@ def group_particles(
         new_indx = None
         for son_indx in new_group:
             assert len(kNN_list[son_indx])==1, "Must be empty lists for sons"
-            kNN_list[son_indx] = sorted(new_group, 
-                    key=lambda i: np.linalg.norm(pos_list[i]-pos_list[son_indx]))
+            kNN_list[son_indx] = sorted(
+                    new_group, 
+                    key=lambda i: np.linalg.norm(
+                        pos_list[i] - pos_list[son_indx]))
     
     return [new_indx] + ret_res
 
@@ -279,17 +328,25 @@ def get_all_fathers(start_idx, father_list, curr_list=[]):
         return curr_list
     else:
         curr_father = father_list[start_idx]
-        return [curr_father] + get_all_fathers(curr_father, father_list, curr_list)
+        return [curr_father] \
+                + get_all_fathers(curr_father, father_list, curr_list)
 
 def get_sparse(dense_mat):
     nonzero_res = np.nonzero(dense_mat)
     nonzero_val = dense_mat[nonzero_res]
     nonzero_res = np.transpose(nonzero_res)
-    sparse_rep = np.concatenate([nonzero_res, nonzero_val[:, np.newaxis]], axis=1)
+    sparse_rep = np.concatenate(
+            [nonzero_res, nonzero_val[:, np.newaxis]], 
+            axis=1)
 
     return sparse_rep
 
 def get_save_dict(args, full_particles):
+    # Filter out the invalid particles
+    all_ids = full_particles[:, 14]
+    valid_mask = all_ids > 0
+    full_particles = full_particles[valid_mask, :]
+
     num_nodes = full_particles.shape[0]
     full_pos = full_particles[:, :3]
     all_ids = full_particles[:, 14]
@@ -307,19 +364,22 @@ def get_save_dict(args, full_particles):
     all_top_nodes = []
     super_node = None
     if args.mult_obj_special==1:
-        assert args.remove_top==0, "Cannot use remove_top when mult_obj_special==1"
+        assert args.remove_top==0, \
+                "Cannot use remove_top when mult_obj_special==1"
     for each_id in np.unique(all_ids):
         curr_prtcls = np.where(all_ids==each_id)[0]
-        new_indx,pos_list,kNN_list,new_node_list,groupflag_list,father_list = group_particles(
-            args,
-            curr_prtcls,
-            pos_list, 
-            kNN_list,
-            new_node_list,
-            groupflag_list,
-            father_list,
-            args.remove_top,
-            )
+        new_indx, pos_list, \
+                kNN_list, new_node_list, \
+                groupflag_list, father_list = group_particles(
+                        args,
+                        curr_prtcls,
+                        pos_list, 
+                        kNN_list,
+                        new_node_list,
+                        groupflag_list,
+                        father_list,
+                        args.remove_top,
+                        )
         all_top_nodes.append(new_indx)
 
     # For multiple object support, add super node
@@ -353,7 +413,10 @@ def get_save_dict(args, full_particles):
             mult_mat_space[idx,idx] = 1.0
             num_p_rep[idx] = 1
         else:
-            son_nodes = [x for x in xrange(num_all_nodes) if father_list[x]==idx]
+            son_nodes = [\
+                    x \
+                    for x in xrange(num_all_nodes) \
+                    if father_list[x]==idx]
             for each_son in son_nodes:
                 mult_mat[idx] += mult_mat[each_son]
                 mult_mat_space[idx] += mult_mat_space[each_son]
@@ -415,7 +478,9 @@ def get_save_dict(args, full_particles):
             direct_father = father_list[idx]
             if direct_father is not None:
                 mult_mat_fact[idx, direct_father] = -1
-        assert np.allclose(np.matmul(mult_mat_fact, mult_mat_space), mult_mat), "Factorization is not successful"
+        assert np.allclose(
+                np.matmul(mult_mat_fact, mult_mat_space), 
+                mult_mat), "Factorization is not successful"
 
         sparse_mult_mat_rev = get_sparse(mult_mat_rev)
         sparse_mult_mat_space = get_sparse(mult_mat_space)
