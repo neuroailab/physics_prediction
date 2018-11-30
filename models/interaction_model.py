@@ -125,23 +125,6 @@ class HRNModel(object):
         # org_which_dataset is before potential randomizations
         self.org_which_dataset = org_which_dataset
 
-    def _get_grav_stiff(self):
-        inputs = self.inputs
-
-        if self.vary_grav == 1:
-            self.inp_gravity = inputs['gravity']
-            # Store the original input
-            self.org_inp_gravity = self.inp_gravity 
-
-        self.inp_stiff = None
-        if self.vary_stiff==1:
-            self.inp_stiff = inputs['stiffness']
-            self.org_inp_stiff = self.inp_stiff # Store the original input
-            self.num_stiff_values = self.inp_stiff.shape[-1]
-            if self.both_stiff_vary==1:
-                assert self.num_stiff_values > 1, \
-                        "Should have multiple stiffness values"
-
     def _post_process_data(self):
         """
         Read in and do necessary post-processing to inputs
@@ -205,24 +188,35 @@ class HRNModel(object):
     def _set_attributes_from_inputs(self):
         inputs = self.inputs
 
-        if self.use_collisions==1:
+        if self.use_collisions == 1:
             assert 'collision' in inputs, "There needs to be collision in input"
             self.collision = inputs['collision'] # (BS, sl, NC, 3)
             self.nc = self.collision.get_shape().as_list()[2]
             self.collision_mask = inputs['collision_mask']
-        if self.use_self==1:
+        if self.use_self == 1:
             assert 'self_collision' in inputs, \
                     'There needs to be self collision in input'
             self.self_collision = inputs['self_collision'] # (BS, sl, NCC, 3)
             self.ncc = self.self_collision.get_shape().as_list()[2]
             self.self_collision_mask = inputs['self_collision_mask']
-        if self.use_static==1:
+        if self.use_static == 1:
             assert 'static_particles' in inputs, \
                     'There needs to be static particles in input'
             self.static_particles = inputs['static_particles']
             self.static_collision = inputs['static_collision'] # (BS, sl, NSC, 3)
             self.nsc = self.static_collision.get_shape().as_list()[2]
             self.static_collision_mask = inputs['static_collision_mask']
+
+        if self.vary_grav == 1:
+            self.inp_gravity = inputs['gravity']
+
+        self.inp_stiff = None
+        if self.vary_stiff == 1:
+            self.inp_stiff = inputs['stiffness']
+            self.num_stiff_values = self.inp_stiff.shape[-1]
+            if self.both_stiff_vary == 1:
+                assert self.num_stiff_values > 1, \
+                        "Should have multiple stiffness values"
 
     def _set_bs_ts_no(self):
         self.bs = self.sparse_particles.get_shape().as_list()[0]
@@ -271,7 +265,7 @@ class HRNModel(object):
         assert self.max_kNN_len > self.nk, \
                 "kNN must be smaller than maximal number %i" % self.max_kNN_len
 
-    def _get_states(self):
+    def _get_all_states(self):
         # Unpacking the states, transposing it so that time is dimension 2
         self.state_pos = tf.transpose(
                 self.sparse_particles[:,:,:,0:3], 
@@ -966,14 +960,11 @@ class HRNModel(object):
         return retval
 
     def prepare_for_building(self):
-        self._get_group_and_which_dataset()
-        self._get_grav_stiff()
-
         if self.debug:
             print('------NETWORK START-----')
 
+        self._get_group_and_which_dataset()
         self._post_process_data()
-
         # Define placeholders for test script that feeds in its own predictions
         if self.my_test:
             self._set_test_placeholders()
@@ -983,7 +974,7 @@ class HRNModel(object):
         self._apply_group()
         self._set_bs_ts_no()
 
-        self._get_states()
+        self._get_all_states()
         self._set_short_names_for_dims()
         self._set_gravity()
 
