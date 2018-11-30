@@ -777,6 +777,8 @@ class HRNModel(object):
     def build_L2H_or_WS_or_H2L(self, which_module, prev_effect):
         '''
         L2H - Lower to higher hierarchy propagation (L2A in the paper) 
+        WG - Within group (WS in the paper)
+        H2L - Higher hierarchy to lower propagation (A2D in the paper)
         '''
         if which_module=='L2H':
             func_get_receiver_sender = self._get_L2H_receiver_sender
